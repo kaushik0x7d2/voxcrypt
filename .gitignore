@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Model artifacts
+*.pt
+*.pth
+*.npz
+scaler.*
+keys/
+
+# Audio data (LibriSpeech downloads)
+data/
+LibriSpeech/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Results
+results.tsv
+
+# Misc
+*.log

@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orion-voice"
+version = "0.1.0"
+description = "End-to-end encrypted speaker verification using FHE"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.2.0",
+    "torchaudio>=2.2.0",
+    "librosa>=0.10.0",
+    "soundfile>=0.12.0",
+    "numpy>=1.21.0",
+    "scipy>=1.7.0",
+    "scikit-learn>=1.0.0",
+    "PyYAML>=6.0",
+    "tqdm>=4.30.0",
+]
+
+[project.optional-dependencies]
+server = ["flask>=3.0.0"]
+dev = ["pytest>=7.0.0"]
+
+[tool.setuptools.packages.find]
+include = ["speaker_verify*"]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: FHE integration tests (deselect with '-m \"not slow\"')",
+    "e2e: end-to-end tests (deselect with '-m \"not e2e\"')",
+]
