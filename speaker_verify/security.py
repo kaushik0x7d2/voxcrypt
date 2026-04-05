@@ -10,7 +10,6 @@ import hashlib
 import hmac
 import time
 import threading
-from functools import wraps
 
 from speaker_verify.logging_config import get_logger
 from speaker_verify.metrics import registry
@@ -19,6 +18,7 @@ logger = get_logger("security")
 
 
 # --- API Key Authentication ---
+
 
 class APIKeyAuth:
     """API key authentication via Bearer token."""
@@ -41,23 +41,26 @@ class APIKeyAuth:
         auth_header = request.headers.get("Authorization", "")
         if not auth_header.startswith("Bearer "):
             registry.auth_failures.inc()
-            logger.warning("Missing Bearer token",
-                           extra={"extra_data": {
-                               "remote_addr": request.remote_addr}})
+            logger.warning(
+                "Missing Bearer token",
+                extra={"extra_data": {"remote_addr": request.remote_addr}},
+            )
             return False, "Missing Authorization header"
 
         token = auth_header[7:]
         if not hmac.compare_digest(token, self.api_key):
             registry.auth_failures.inc()
-            logger.warning("Invalid API key",
-                           extra={"extra_data": {
-                               "remote_addr": request.remote_addr}})
+            logger.warning(
+                "Invalid API key",
+                extra={"extra_data": {"remote_addr": request.remote_addr}},
+            )
             return False, "Invalid API key"
 
         return True, None
 
 
 # --- Rate Limiter ---
+
 
 class RateLimiter:
     """Per-IP token bucket rate limiter."""
@@ -71,8 +74,9 @@ class RateLimiter:
     def _cleanup(self):
         """Remove expired entries."""
         now = time.time()
-        expired = [ip for ip, (_, ts) in self._buckets.items()
-                   if now - ts > self.window * 2]
+        expired = [
+            ip for ip, (_, ts) in self._buckets.items() if now - ts > self.window * 2
+        ]
         for ip in expired:
             del self._buckets[ip]
 
@@ -103,9 +107,10 @@ class RateLimiter:
             if count >= self.max_requests:
                 retry_after = int(self.window - (now - window_start)) + 1
                 registry.rate_limit_hits.inc()
-                logger.warning("Rate limit exceeded",
-                               extra={"extra_data": {
-                                   "ip": ip, "count": count}})
+                logger.warning(
+                    "Rate limit exceeded",
+                    extra={"extra_data": {"ip": ip, "count": count}},
+                )
                 return False, retry_after
 
             self._buckets[ip] = (count + 1, window_start)
@@ -113,6 +118,7 @@ class RateLimiter:
 
 
 # --- Input Validation ---
+
 
 class InputValidator:
     """Validates request payloads."""
@@ -154,15 +160,19 @@ class InputValidator:
                 return False, f"ciphertexts[{i}] is not valid base64"
 
         if total_size > self.max_payload_bytes:
-            return False, (f"Payload too large: {total_size / 1024 / 1024:.1f}MB "
-                           f"(max {self.max_payload_bytes / 1024 / 1024:.0f}MB)")
+            return False, (
+                f"Payload too large: {total_size / 1024 / 1024:.1f}MB "
+                f"(max {self.max_payload_bytes / 1024 / 1024:.0f}MB)"
+            )
 
         if not isinstance(data["shape"], list) or not all(
-                isinstance(x, int) and x > 0 for x in data["shape"]):
+            isinstance(x, int) and x > 0 for x in data["shape"]
+        ):
             return False, "'shape' must be a list of positive integers"
 
         if not isinstance(data["on_shape"], list) or not all(
-                isinstance(x, int) and x > 0 for x in data["on_shape"]):
+            isinstance(x, int) and x > 0 for x in data["on_shape"]
+        ):
             return False, "'on_shape' must be a list of positive integers"
 
         return True, None
@@ -185,8 +195,11 @@ class InputValidator:
 
         # Check file extension
         allowed_ext = {".wav", ".flac", ".mp3", ".ogg", ".m4a"}
-        ext = "." + file_storage.filename.rsplit(".", 1)[-1].lower() \
-            if "." in file_storage.filename else ""
+        ext = (
+            "." + file_storage.filename.rsplit(".", 1)[-1].lower()
+            if "." in file_storage.filename
+            else ""
+        )
         if ext not in allowed_ext:
             return False, f"Unsupported file type: {ext}"
 
@@ -196,8 +209,10 @@ class InputValidator:
         file_storage.seek(0)  # Reset
 
         if size > max_bytes:
-            return False, (f"File too large: {size / 1024 / 1024:.1f}MB "
-                           f"(max {max_bytes / 1024 / 1024:.0f}MB)")
+            return False, (
+                f"File too large: {size / 1024 / 1024:.1f}MB "
+                f"(max {max_bytes / 1024 / 1024:.0f}MB)"
+            )
 
         if size == 0:
             return False, "Empty file"
@@ -216,6 +231,7 @@ class InputValidator:
 
 # --- Key Management ---
 
+
 def hash_key(key_bytes):
     """Generate a SHA-256 hash of key material for integrity checking."""
     return hashlib.sha256(key_bytes).hexdigest()
@@ -229,7 +245,9 @@ def encrypt_key_file(key_bytes, password):
     For production HSM integration, replace this.
     """
     salt = hashlib.sha256(password.encode()).digest()[:16]
-    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100000, dklen=len(key_bytes))
+    dk = hashlib.pbkdf2_hmac(
+        "sha256", password.encode(), salt, 100000, dklen=len(key_bytes)
+    )
     encrypted = bytes(a ^ b for a, b in zip(key_bytes, dk))
     return salt + encrypted
 
@@ -238,5 +256,7 @@ def decrypt_key_file(encrypted_data, password):
     """Decrypt a key file encrypted with encrypt_key_file."""
     salt = encrypted_data[:16]
     encrypted = encrypted_data[16:]
-    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100000, dklen=len(encrypted))
+    dk = hashlib.pbkdf2_hmac(
+        "sha256", password.encode(), salt, 100000, dklen=len(encrypted)
+    )
     return bytes(a ^ b for a, b in zip(encrypted, dk))

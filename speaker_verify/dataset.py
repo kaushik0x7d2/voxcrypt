@@ -165,10 +165,12 @@ def build_dataset(pairs, sr=16000, n_mfcc=20, enhanced=False):
     for path_a, path_b, label in tqdm(pairs, desc="Extracting features"):
         if path_a not in embedding_cache:
             embedding_cache[path_a] = audio_to_embedding(
-                path_a, sr=sr, n_mfcc=n_mfcc, enhanced=enhanced)
+                path_a, sr=sr, n_mfcc=n_mfcc, enhanced=enhanced
+            )
         if path_b not in embedding_cache:
             embedding_cache[path_b] = audio_to_embedding(
-                path_b, sr=sr, n_mfcc=n_mfcc, enhanced=enhanced)
+                path_b, sr=sr, n_mfcc=n_mfcc, enhanced=enhanced
+            )
 
         feat = pair_features(embedding_cache[path_a], embedding_cache[path_b])
         X_list.append(feat)
@@ -204,21 +206,23 @@ def build_concat_dataset(pairs, sr=16000, n_mfcc=20, enhanced=False):
     for path_a, path_b, label in tqdm(pairs, desc="Extracting features"):
         if path_a not in embedding_cache:
             embedding_cache[path_a] = audio_to_embedding(
-                path_a, sr=sr, n_mfcc=n_mfcc, enhanced=enhanced)
+                path_a, sr=sr, n_mfcc=n_mfcc, enhanced=enhanced
+            )
         if path_b not in embedding_cache:
             embedding_cache[path_b] = audio_to_embedding(
-                path_b, sr=sr, n_mfcc=n_mfcc, enhanced=enhanced)
+                path_b, sr=sr, n_mfcc=n_mfcc, enhanced=enhanced
+            )
 
-        feat = pair_features_concat(
-            embedding_cache[path_a], embedding_cache[path_b])
+        feat = pair_features_concat(embedding_cache[path_a], embedding_cache[path_b])
         X_list.append(feat)
         y_list.append(label)
 
     return np.array(X_list, dtype=np.float32), np.array(y_list, dtype=np.float32)
 
 
-def build_single_utterance_dataset(speakers, sr=16000, n_mfcc=20, enhanced=False,
-                                   max_per_speaker=None):
+def build_single_utterance_dataset(
+    speakers, sr=16000, n_mfcc=20, enhanced=False, max_per_speaker=None
+):
     """
     Build dataset of single utterance embeddings labeled by speaker ID.
 
@@ -249,6 +253,8 @@ def build_single_utterance_dataset(speakers, sr=16000, n_mfcc=20, enhanced=False
             X_list.append(emb)
             y_list.append(idx)
 
-    return (np.array(X_list, dtype=np.float32),
-            np.array(y_list, dtype=np.int64),
-            speaker_ids)
+    return (
+        np.array(X_list, dtype=np.float32),
+        np.array(y_list, dtype=np.int64),
+        speaker_ids,
+    )

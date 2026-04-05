@@ -19,8 +19,7 @@ import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..",
-                                "orion", "repo"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "orion", "repo"))
 
 import orion
 from speaker_verify.model import SpeakerVerifyNet
@@ -28,8 +27,9 @@ from speaker_verify.model import SpeakerVerifyNet
 
 def main():
     parser = argparse.ArgumentParser(description="FHE Benchmark")
-    parser.add_argument("--num-samples", type=int, default=10,
-                        help="Number of samples to benchmark")
+    parser.add_argument(
+        "--num-samples", type=int, default=10, help="Number of samples to benchmark"
+    )
     args = parser.parse_args()
 
     torch.manual_seed(42)
@@ -43,8 +43,9 @@ def main():
             return
 
     model = SpeakerVerifyNet()
-    model.load_state_dict(torch.load(
-        os.path.join(demo_dir, "speaker_model.pt"), weights_only=True))
+    model.load_state_dict(
+        torch.load(os.path.join(demo_dir, "speaker_model.pt"), weights_only=True)
+    )
     model.eval()
 
     samples = np.load(os.path.join(demo_dir, "test_samples.npz"))
@@ -77,7 +78,9 @@ def main():
 
     # Benchmark inference
     print(f"\nBenchmarking {num_samples} samples...")
-    print(f"{'Sample':>8s} | {'Encode':>8s} | {'Encrypt':>8s} | {'Infer':>8s} | {'Decrypt':>8s} | {'Total':>8s} | {'Bits':>6s}")
+    print(
+        f"{'Sample':>8s} | {'Encode':>8s} | {'Encrypt':>8s} | {'Infer':>8s} | {'Decrypt':>8s} | {'Total':>8s} | {'Bits':>6s}"
+    )
     print("-" * 72)
 
     enc_times = []
@@ -87,7 +90,7 @@ def main():
     precision_bits = []
 
     for i in range(num_samples):
-        sample = torch.tensor(X_test[i:i+1], dtype=torch.float32)
+        sample = torch.tensor(X_test[i : i + 1], dtype=torch.float32)
         t_start = time.time()
 
         t0 = time.time()
@@ -112,7 +115,7 @@ def main():
         with torch.no_grad():
             c_out = model(sample).flatten()[:2]
         mae = (c_out - fhe_out).abs().mean().item()
-        bits = -math.log2(mae) if mae > 0 else float('inf')
+        bits = -math.log2(mae) if mae > 0 else float("inf")
 
         enc_times.append(t_enc)
         inf_times.append(t_inf)
@@ -120,20 +123,24 @@ def main():
         total_times.append(t_total)
         precision_bits.append(bits)
 
-        print(f"{i+1:>8d} | {t_enc:>7.2f}s | {t_enc:>7.2f}s | {t_inf:>7.2f}s | {t_dec:>7.2f}s | {t_total:>7.2f}s | {bits:>5.1f}")
+        print(
+            f"{i + 1:>8d} | {t_enc:>7.2f}s | {t_enc:>7.2f}s | {t_inf:>7.2f}s | {t_dec:>7.2f}s | {t_total:>7.2f}s | {bits:>5.1f}"
+        )
 
     # Summary
-    print(f"\n{'='*72}")
+    print(f"\n{'=' * 72}")
     print(f"  Samples:         {num_samples}")
-    print(f"  Setup:           {t_init + t_fit + t_compile:.2f}s (init + fit + compile)")
+    print(
+        f"  Setup:           {t_init + t_fit + t_compile:.2f}s (init + fit + compile)"
+    )
     print(f"  Avg Encode+Enc:  {np.mean(enc_times):.2f}s")
     print(f"  Avg Inference:   {np.mean(inf_times):.2f}s")
     print(f"  Avg Decrypt:     {np.mean(dec_times):.2f}s")
     print(f"  Avg Total:       {np.mean(total_times):.2f}s")
     print(f"  Min/Max Infer:   {np.min(inf_times):.2f}s / {np.max(inf_times):.2f}s")
     print(f"  Avg Precision:   {np.mean(precision_bits):.1f} bits")
-    print(f"  Model:           SpeakerVerifyNet (40->128->64->2, SiLU)")
-    print(f"{'='*72}")
+    print("  Model:           SpeakerVerifyNet (40->128->64->2, SiLU)")
+    print(f"{'=' * 72}")
 
     scheme.delete_scheme()
 

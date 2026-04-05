@@ -3,8 +3,11 @@
 import time
 import pytest
 from speaker_verify.resilience import (
-    retry, CircuitBreaker, CircuitBreakerOpenError,
-    InferenceQueue, QueueFullError)
+    retry,
+    CircuitBreaker,
+    CircuitBreakerOpenError,
+    InferenceQueue,
+)
 
 
 class TestRetry:
@@ -24,8 +27,7 @@ class TestRetry:
     def test_succeeds_after_retries(self):
         call_count = 0
 
-        @retry(max_retries=3, backoff_base=0.01,
-               retryable=(ConnectionError,))
+        @retry(max_retries=3, backoff_base=0.01, retryable=(ConnectionError,))
         def fail_twice():
             nonlocal call_count
             call_count += 1
@@ -38,8 +40,7 @@ class TestRetry:
         assert call_count == 3
 
     def test_exhausts_retries(self):
-        @retry(max_retries=2, backoff_base=0.01,
-               retryable=(ConnectionError,))
+        @retry(max_retries=2, backoff_base=0.01, retryable=(ConnectionError,))
         def always_fail():
             raise ConnectionError("fail")
 
@@ -47,8 +48,7 @@ class TestRetry:
             always_fail()
 
     def test_non_retryable_exception(self):
-        @retry(max_retries=3, backoff_base=0.01,
-               retryable=(ConnectionError,))
+        @retry(max_retries=3, backoff_base=0.01, retryable=(ConnectionError,))
         def raise_value_error():
             raise ValueError("not retryable")
 
@@ -113,8 +113,7 @@ class TestInferenceQueue:
         q = InferenceQueue(max_queue_size=10)
         q.start()
         try:
-            future = q.submit(lambda: (_ for _ in ()).throw(
-                ValueError("test error")))
+            future = q.submit(lambda: (_ for _ in ()).throw(ValueError("test error")))
             with pytest.raises(ValueError, match="test error"):
                 future.result(timeout=5)
         finally:
@@ -125,8 +124,7 @@ class TestInferenceQueue:
         q.start()
         try:
             results = []
-            futures = [q.submit(lambda i=i: results.append(i) or i)
-                       for i in range(5)]
+            futures = [q.submit(lambda i=i: results.append(i) or i) for i in range(5)]
             for f in futures:
                 f.result(timeout=5)
             assert results == [0, 1, 2, 3, 4]

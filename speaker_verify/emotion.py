@@ -28,8 +28,9 @@ EMOTION_CODES = {
     "L": (6, "boredom"),
 }
 
-EMOTION_NAMES = [name for _, (_, name) in sorted(
-    EMOTION_CODES.items(), key=lambda x: x[1][0])]
+EMOTION_NAMES = [
+    name for _, (_, name) in sorted(EMOTION_CODES.items(), key=lambda x: x[1][0])
+]
 
 EMODB_URL = "http://emodb.bilderbar.info/download/download.zip"
 
@@ -99,12 +100,14 @@ def scan_emodb(wav_dir):
         emotion_idx, emotion_name = EMOTION_CODES[emotion_code]
         speaker_id = name[:2]
 
-        entries.append((
-            os.path.join(wav_dir, fname),
-            emotion_idx,
-            emotion_name,
-            speaker_id,
-        ))
+        entries.append(
+            (
+                os.path.join(wav_dir, fname),
+                emotion_idx,
+                emotion_name,
+                speaker_id,
+            )
+        )
 
     return entries
 
@@ -134,6 +137,8 @@ def build_emotion_dataset(wav_dir, sr=16000, n_mfcc=20, enhanced=False):
         X_list.append(emb)
         y_list.append(emotion_idx)
 
-    return (np.array(X_list, dtype=np.float32),
-            np.array(y_list, dtype=np.int64),
-            EMOTION_NAMES)
+    return (
+        np.array(X_list, dtype=np.float32),
+        np.array(y_list, dtype=np.int64),
+        EMOTION_NAMES,
+    )

@@ -19,12 +19,10 @@ import numpy as np
 from flask import Flask, request, jsonify, render_template
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..",
-                                "orion", "repo"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "orion", "repo"))
 
 from speaker_verify.features import audio_to_embedding, pair_features
-from speaker_verify.model import (
-    SpeakerVerifyNet, SpeakerIDNet, GenderNet, EmotionNet)
+from speaker_verify.model import SpeakerVerifyNet, SpeakerIDNet, GenderNet, EmotionNet
 from speaker_verify.logging_config import setup_logging, get_logger
 from speaker_verify.security import InputValidator
 
@@ -114,10 +112,9 @@ def index():
 
 @app.route("/api/tasks")
 def api_tasks():
-    return jsonify({
-        "tasks": {name: {"labels": info["labels"]}
-                  for name, info in _models.items()}
-    })
+    return jsonify(
+        {"tasks": {name: {"labels": info["labels"]} for name, info in _models.items()}}
+    )
 
 
 @app.route("/api/predict", methods=["POST"])
@@ -125,8 +122,9 @@ def api_predict():
     task = request.form.get("task", "verify")
 
     if task not in _models:
-        return jsonify({"error": f"Task '{task}' not available",
-                        "code": "INVALID_TASK"}), 400
+        return jsonify(
+            {"error": f"Task '{task}' not available", "code": "INVALID_TASK"}
+        ), 400
 
     model_info = _models[task]
     model = model_info["model"]
@@ -136,14 +134,17 @@ def api_predict():
     # Handle file uploads with validation
     if task == "verify":
         if "audio_a" not in request.files or "audio_b" not in request.files:
-            return jsonify({"error": "Need two audio files for verification",
-                            "code": "MISSING_FILES"}), 400
+            return jsonify(
+                {
+                    "error": "Need two audio files for verification",
+                    "code": "MISSING_FILES",
+                }
+            ), 400
 
         for key in ("audio_a", "audio_b"):
             ok, err = _validator.validate_audio_upload(request.files[key])
             if not ok:
-                return jsonify({"error": err,
-                                "code": "INVALID_FILE"}), 400
+                return jsonify({"error": err, "code": "INVALID_FILE"}), 400
 
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f_a:
             request.files["audio_a"].save(f_a.name)
@@ -160,15 +161,15 @@ def api_predict():
             t_feat = time.time() - t0
         except Exception as e:
             logger.exception("Feature extraction failed")
-            return jsonify({"error": f"Feature extraction failed: {e}",
-                            "code": "EXTRACTION_ERROR"}), 400
+            return jsonify(
+                {"error": f"Feature extraction failed: {e}", "code": "EXTRACTION_ERROR"}
+            ), 400
         finally:
             os.unlink(path_a)
             os.unlink(path_b)
     else:
         if "audio" not in request.files:
-            return jsonify({"error": "Need an audio file",
-                            "code": "MISSING_FILE"}), 400
+            return jsonify({"error": "Need an audio file", "code": "MISSING_FILE"}), 400
 
         ok, err = _validator.validate_audio_upload(request.files["audio"])
         if not ok:
@@ -184,8 +185,9 @@ def api_predict():
             t_feat = time.time() - t0
         except Exception as e:
             logger.exception("Feature extraction failed")
-            return jsonify({"error": f"Feature extraction failed: {e}",
-                            "code": "EXTRACTION_ERROR"}), 400
+            return jsonify(
+                {"error": f"Feature extraction failed: {e}", "code": "EXTRACTION_ERROR"}
+            ), 400
         finally:
             os.unlink(path)
 
@@ -204,32 +206,34 @@ def api_predict():
 
     logger.info(f"Prediction: {labels[pred]} (task={task})")
 
-    return jsonify({
-        "task": task,
-        "prediction": labels[pred],
-        "prediction_idx": pred,
-        "probabilities": {labels[i]: float(probs[i])
-                          for i in range(len(labels))},
-        "feature_time": round(t_feat, 4),
-        "inference_time": round(t_inf, 4),
-    })
+    return jsonify(
+        {
+            "task": task,
+            "prediction": labels[pred],
+            "prediction_idx": pred,
+            "probabilities": {labels[i]: float(probs[i]) for i in range(len(labels))},
+            "feature_time": round(t_feat, 4),
+            "inference_time": round(t_inf, 4),
+        }
+    )
 
 
 @app.errorhandler(413)
 def handle_413(e):
-    return jsonify({"error": "File too large (max 50MB)",
-                    "code": "PAYLOAD_TOO_LARGE"}), 413
+    return jsonify(
+        {"error": "File too large (max 50MB)", "code": "PAYLOAD_TOO_LARGE"}
+    ), 413
 
 
 @app.errorhandler(500)
 def handle_500(e):
     logger.exception("Internal server error")
-    return jsonify({"error": "Internal server error",
-                    "code": "INTERNAL_ERROR"}), 500
+    return jsonify({"error": "Internal server error", "code": "INTERNAL_ERROR"}), 500
 
 
 def main():
     import argparse
+
     parser = argparse.ArgumentParser(description="Voice Analysis Web UI")
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--host", default="127.0.0.1")

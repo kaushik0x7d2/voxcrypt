@@ -16,18 +16,18 @@ import numpy as np
 from sklearn.metrics import classification_report
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..",
-                                "orion", "repo"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "orion", "repo"))
 
 from speaker_verify.model import EmotionNet
-from speaker_verify.emotion import download_emodb, build_emotion_dataset, EMOTION_NAMES
+from speaker_verify.emotion import download_emodb, build_emotion_dataset
 from speaker_verify.train import train_model
 
 
 def main():
     parser = argparse.ArgumentParser(description="Train Emotion Detection Model")
-    parser.add_argument("--data-root", default=os.path.join(
-        os.path.dirname(__file__), "..", "data"))
+    parser.add_argument(
+        "--data-root", default=os.path.join(os.path.dirname(__file__), "..", "data")
+    )
     parser.add_argument("--epochs", type=int, default=300)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--noise-std", type=float, default=0.1)
@@ -52,10 +52,14 @@ def main():
 
     # Train
     model = EmotionNet(input_dim=X.shape[1], n_emotions=len(emotion_names))
-    print(f"\nTraining EmotionNet...")
+    print("\nTraining EmotionNet...")
     model, scaler, metrics, X_val, y_val = train_model(
-        X, y.astype(np.float32), model,
-        epochs=args.epochs, lr=args.lr, noise_std=args.noise_std
+        X,
+        y.astype(np.float32),
+        model,
+        epochs=args.epochs,
+        lr=args.lr,
+        noise_std=args.noise_std,
     )
 
     print(f"\nBest validation accuracy: {metrics['val_acc']:.4f}")

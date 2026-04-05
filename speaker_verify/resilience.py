@@ -9,7 +9,6 @@ import time
 import random
 import queue
 import threading
-import logging
 from concurrent.futures import Future
 from functools import wraps
 
@@ -20,8 +19,8 @@ logger = get_logger("resilience")
 
 # --- Retry Decorator ---
 
-def retry(max_retries=3, backoff_base=1.0,
-          retryable=(ConnectionError, TimeoutError)):
+
+def retry(max_retries=3, backoff_base=1.0, retryable=(ConnectionError, TimeoutError)):
     """
     Retry decorator with exponential backoff and jitter.
 
@@ -30,6 +29,7 @@ def retry(max_retries=3, backoff_base=1.0,
         backoff_base: Base delay in seconds (doubled each retry).
         retryable: Tuple of exception types that trigger a retry.
     """
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -40,19 +40,23 @@ def retry(max_retries=3, backoff_base=1.0,
                 except retryable as e:
                     last_exc = e
                     if attempt < max_retries:
-                        delay = backoff_base * (2 ** attempt)
+                        delay = backoff_base * (2**attempt)
                         jitter = random.uniform(0, delay * 0.1)
                         logger.warning(
                             f"Retry {attempt + 1}/{max_retries} for "
                             f"{func.__name__}: {e}. "
-                            f"Waiting {delay + jitter:.1f}s")
+                            f"Waiting {delay + jitter:.1f}s"
+                        )
                         time.sleep(delay + jitter)
             raise last_exc
+
         return wrapper
+
     return decorator
 
 
 # --- Circuit Breaker ---
+
 
 class CircuitBreaker:
     """
@@ -68,8 +72,7 @@ class CircuitBreaker:
     OPEN = "open"
     HALF_OPEN = "half_open"
 
-    def __init__(self, failure_threshold=5, recovery_timeout=30,
-                 name="default"):
+    def __init__(self, failure_threshold=5, recovery_timeout=30, name="default"):
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
         self.name = name
@@ -94,13 +97,14 @@ class CircuitBreaker:
         if state == self.OPEN:
             raise CircuitBreakerOpenError(
                 f"Circuit breaker '{self.name}' is OPEN. "
-                f"Retry after {self.recovery_timeout}s.")
+                f"Retry after {self.recovery_timeout}s."
+            )
 
         try:
             result = func(*args, **kwargs)
             self._on_success()
             return result
-        except Exception as e:
+        except Exception:
             self._on_failure()
             raise
 
@@ -119,7 +123,8 @@ class CircuitBreaker:
                 self._state = self.OPEN
                 logger.warning(
                     f"Circuit breaker '{self.name}' -> OPEN "
-                    f"after {self._failure_count} failures")
+                    f"after {self._failure_count} failures"
+                )
 
 
 class CircuitBreakerOpenError(Exception):
@@ -127,6 +132,7 @@ class CircuitBreakerOpenError(Exception):
 
 
 # --- Inference Queue ---
+
 
 class InferenceQueue:
     """
@@ -146,8 +152,7 @@ class InferenceQueue:
     def start(self):
         """Start the inference worker thread."""
         self._running = True
-        self._worker_thread = threading.Thread(
-            target=self._worker, daemon=True)
+        self._worker_thread = threading.Thread(target=self._worker, daemon=True)
         self._worker_thread.start()
         logger.info("Inference queue started")
 
@@ -168,12 +173,11 @@ class InferenceQueue:
         """
         future = Future()
         try:
-            self._queue.put(
-                (future, inference_fn, args, kwargs),
-                timeout=self._timeout)
+            self._queue.put((future, inference_fn, args, kwargs), timeout=self._timeout)
         except queue.Full:
             future.set_exception(
-                QueueFullError("Inference queue is full. Try again later."))
+                QueueFullError("Inference queue is full. Try again later.")
+            )
         return future
 
     def _worker(self):

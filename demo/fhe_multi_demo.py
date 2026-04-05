@@ -19,8 +19,7 @@ import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..",
-                                "orion", "repo"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "orion", "repo"))
 
 import orion
 
@@ -55,25 +54,30 @@ def load_model_for_task(task_name, demo_dir):
 
     if task_name == "verify":
         from speaker_verify.model import SpeakerVerifyNet
+
         model = SpeakerVerifyNet()
     elif task_name == "speaker_id":
         from speaker_verify.model import SpeakerIDNet
+
         meta = np.load(os.path.join(demo_dir, task["meta_file"]), allow_pickle=True)
         speaker_ids = list(meta["speaker_ids"])
         model = SpeakerIDNet(n_speakers=len(speaker_ids))
         task["labels"] = [f"Speaker {s}" for s in speaker_ids]
     elif task_name == "gender":
         from speaker_verify.model import GenderNet
+
         model = GenderNet()
     elif task_name == "emotion":
         from speaker_verify.model import EmotionNet
+
         meta = np.load(os.path.join(demo_dir, task["meta_file"]), allow_pickle=True)
         emotion_names = list(meta["emotion_names"])
         model = EmotionNet(n_emotions=len(emotion_names))
         task["labels"] = emotion_names
 
-    model.load_state_dict(torch.load(
-        os.path.join(demo_dir, task["model_file"]), weights_only=True))
+    model.load_state_dict(
+        torch.load(os.path.join(demo_dir, task["model_file"]), weights_only=True)
+    )
     model.eval()
 
     samples = np.load(os.path.join(demo_dir, task["sample_file"]))
@@ -95,13 +99,17 @@ def run_fhe_task(task_name, demo_dir, config_path, num_samples=10):
         clear_out = model(X_all)
         clear_preds = clear_out.argmax(dim=1).numpy()
 
-    correct_clear = sum(1 for i in range(num_samples) if clear_preds[i] == int(y_test[i]))
+    correct_clear = sum(
+        1 for i in range(num_samples) if clear_preds[i] == int(y_test[i])
+    )
     for i in range(num_samples):
         pred = clear_preds[i]
         actual = int(y_test[i])
         status = "ok" if pred == actual else "WRONG"
-        print(f"  {i+1:2d}/{num_samples}: {labels[pred]:<16s} "
-              f"(actual: {labels[actual]:<16s}) [{status:>5s}]")
+        print(
+            f"  {i + 1:2d}/{num_samples}: {labels[pred]:<16s} "
+            f"(actual: {labels[actual]:<16s}) [{status:>5s}]"
+        )
     print(f"  Cleartext Accuracy: {correct_clear}/{num_samples}")
 
     # FHE
@@ -123,7 +131,7 @@ def run_fhe_task(task_name, demo_dir, config_path, num_samples=10):
     times = []
 
     for i in range(num_samples):
-        sample = torch.tensor(X_test[i:i+1], dtype=torch.float32)
+        sample = torch.tensor(X_test[i : i + 1], dtype=torch.float32)
         actual = int(y_test[i])
 
         ptxt = orion.encode(sample, input_level)
@@ -145,17 +153,21 @@ def run_fhe_task(task_name, demo_dir, config_path, num_samples=10):
         with torch.no_grad():
             c_out = model(sample).flatten()[:n_out]
         mae = (c_out - fhe_out).abs().mean().item()
-        bits = -math.log2(mae) if mae > 0 else float('inf')
+        bits = -math.log2(mae) if mae > 0 else float("inf")
 
         status = "ok" if pred == actual else "WRONG"
-        print(f"  {i+1:2d}/{num_samples}: {labels[pred]:<16s} "
-              f"(actual: {labels[actual]:<16s}) [{status:>5s}] "
-              f"| {t_inf:.1f}s | {bits:.1f} bits")
+        print(
+            f"  {i + 1:2d}/{num_samples}: {labels[pred]:<16s} "
+            f"(actual: {labels[actual]:<16s}) [{status:>5s}] "
+            f"| {t_inf:.1f}s | {bits:.1f} bits"
+        )
 
     correct_fhe = sum(1 for i in range(len(results)) if results[i] == int(y_test[i]))
     agree = sum(1 for i in range(len(results)) if results[i] == clear_preds[i])
 
-    print(f"\n  FHE Accuracy:        {correct_fhe}/{num_samples} ({correct_fhe/num_samples:.0%})")
+    print(
+        f"\n  FHE Accuracy:        {correct_fhe}/{num_samples} ({correct_fhe / num_samples:.0%})"
+    )
     print(f"  FHE-Clear Agreement: {agree}/{num_samples}")
     print(f"  Avg Inference Time:  {np.mean(times):.1f}s")
 
@@ -192,15 +204,18 @@ def main():
     summary = {}
     for task in available:
         correct, total, agree = run_fhe_task(
-            task, demo_dir, config_path, args.num_samples)
+            task, demo_dir, config_path, args.num_samples
+        )
         summary[task] = (correct, total, agree)
 
-    print(f"\n{'='*50}")
-    print(f"  SUMMARY")
-    print(f"{'='*50}")
+    print(f"\n{'=' * 50}")
+    print("  SUMMARY")
+    print(f"{'=' * 50}")
     for task, (correct, total, agree) in summary.items():
-        print(f"  {task:<12s}: FHE {correct}/{total} ({correct/total:.0%}) | "
-              f"Agreement {agree}/{total}")
+        print(
+            f"  {task:<12s}: FHE {correct}/{total} ({correct / total:.0%}) | "
+            f"Agreement {agree}/{total}"
+        )
 
 
 if __name__ == "__main__":

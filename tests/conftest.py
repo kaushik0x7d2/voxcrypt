@@ -12,8 +12,7 @@ import numpy as np
 import soundfile as sf
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..",
-                                "orion", "repo"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "orion", "repo"))
 
 
 @pytest.fixture
@@ -79,7 +78,9 @@ def mock_librispeech(tmp_path):
             chap_dir.mkdir(parents=True)
             for utt in range(2):
                 audio = 0.5 * np.sin(2 * np.pi * (300 + int(spk_id)) * t)
-                audio += 0.05 * np.random.RandomState(int(spk_id) + utt).randn(len(audio))
+                audio += 0.05 * np.random.RandomState(int(spk_id) + utt).randn(
+                    len(audio)
+                )
                 fpath = chap_dir / f"{spk_id}-{chap_id}-{utt:04d}.flac"
                 sf.write(str(fpath), audio, sr)
 
@@ -109,9 +110,7 @@ def trained_model(tmp_path):
     y = np.concatenate([y_same, y_diff])
 
     model = SpeakerVerifyNet(input_dim=40)
-    model, scaler, metrics, X_val, y_val = train_model(
-        X, y, model, epochs=50, lr=1e-3
-    )
+    model, scaler, metrics, X_val, y_val = train_model(X, y, model, epochs=50, lr=1e-3)
 
     # Save artifacts
     model_path = str(tmp_path / "speaker_model.pt")

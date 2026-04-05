@@ -12,7 +12,7 @@ def add_noise(audio, snr_db=20, rng=None):
     """Add Gaussian noise at a given SNR level."""
     if rng is None:
         rng = np.random.default_rng()
-    signal_power = np.mean(audio ** 2)
+    signal_power = np.mean(audio**2)
     noise_power = signal_power / (10 ** (snr_db / 10))
     noise = rng.normal(0, np.sqrt(noise_power), len(audio))
     return audio + noise

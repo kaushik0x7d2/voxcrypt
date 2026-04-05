@@ -13,25 +13,29 @@ import argparse
 
 import torch
 import numpy as np
-from sklearn.metrics import classification_report
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..",
-                                "orion", "repo"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "orion", "repo"))
 
 from speaker_verify.model import SpeakerIDNet
-from speaker_verify.dataset import download_librispeech, scan_speakers, build_single_utterance_dataset
+from speaker_verify.dataset import (
+    download_librispeech,
+    scan_speakers,
+    build_single_utterance_dataset,
+)
 from speaker_verify.train import train_model
 
 
 def main():
     parser = argparse.ArgumentParser(description="Train Speaker ID Model")
-    parser.add_argument("--data-root", default=os.path.join(
-        os.path.dirname(__file__), "..", "data"))
+    parser.add_argument(
+        "--data-root", default=os.path.join(os.path.dirname(__file__), "..", "data")
+    )
     parser.add_argument("--epochs", type=int, default=300)
     parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--noise-std", type=float, default=0.1,
-                        help="FHE-aware noise injection")
+    parser.add_argument(
+        "--noise-std", type=float, default=0.1, help="FHE-aware noise injection"
+    )
     args = parser.parse_args()
 
     torch.manual_seed(42)
@@ -55,8 +59,12 @@ def main():
     print(f"\nTraining SpeakerIDNet ({X.shape[1]}->{n_speakers})...")
 
     model, scaler, metrics, X_val, y_val = train_model(
-        X, y.astype(np.float32), model,
-        epochs=args.epochs, lr=args.lr, noise_std=args.noise_std
+        X,
+        y.astype(np.float32),
+        model,
+        epochs=args.epochs,
+        lr=args.lr,
+        noise_std=args.noise_std,
     )
 
     print(f"\nBest validation accuracy: {metrics['val_acc']:.4f}")

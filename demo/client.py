@@ -20,8 +20,7 @@ import numpy as np
 import requests as http_requests
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..",
-                                "orion", "repo"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "orion", "repo"))
 
 import orion
 from orion.backend.python.tensors import CipherTensor
@@ -61,16 +60,19 @@ def encrypt_sample(sample_data, input_level):
     ctxt = orion.encrypt(ptxt)
     serialized = ctxt.serialize()
     return {
-        "ciphertexts": [base64.b64encode(b).decode()
-                        for b in serialized["ciphertexts"]],
+        "ciphertexts": [
+            base64.b64encode(b).decode() for b in serialized["ciphertexts"]
+        ],
         "shape": serialized["shape"],
         "on_shape": serialized["on_shape"],
     }
 
 
-@retry(max_retries=3, backoff_base=2.0,
-       retryable=(ConnectionError, http_requests.ConnectionError,
-                  http_requests.Timeout))
+@retry(
+    max_retries=3,
+    backoff_base=2.0,
+    retryable=(ConnectionError, http_requests.ConnectionError, http_requests.Timeout),
+)
 def send_for_inference(server_url, payload, api_key=None, timeout=120):
     """Send encrypted ciphertext to the server and get back encrypted result."""
     headers = {"Content-Type": "application/json"}
@@ -78,8 +80,8 @@ def send_for_inference(server_url, payload, api_key=None, timeout=120):
         headers["Authorization"] = f"Bearer {api_key}"
 
     resp = http_requests.post(
-        f"{server_url}/api/v1/predict",
-        json=payload, headers=headers, timeout=timeout)
+        f"{server_url}/api/v1/predict", json=payload, headers=headers, timeout=timeout
+    )
 
     if resp.status_code == 401:
         raise AuthError("Authentication failed. Check your API key.")
@@ -96,8 +98,7 @@ def send_for_inference(server_url, payload, api_key=None, timeout=120):
 def decrypt_result(scheme, response):
     """Deserialize and decrypt the server's response."""
     ct_data = {
-        "ciphertexts": [base64.b64decode(b)
-                        for b in response["ciphertexts"]],
+        "ciphertexts": [base64.b64decode(b) for b in response["ciphertexts"]],
         "shape": response["shape"],
         "on_shape": response["on_shape"],
     }
@@ -125,16 +126,15 @@ def check_server_health(server_url, timeout=10):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="FHE Speaker Verification Client")
-    parser.add_argument("--url", default="http://127.0.0.1:5000",
-                        help="Server URL")
-    parser.add_argument("--num-samples", type=int, default=5,
-                        help="Number of pairs to test")
-    parser.add_argument("--api-key", default=None,
-                        help="API key for authentication")
-    parser.add_argument("--key-password", default=None,
-                        help="Password to decrypt the secret key file")
+    parser = argparse.ArgumentParser(description="FHE Speaker Verification Client")
+    parser.add_argument("--url", default="http://127.0.0.1:5000", help="Server URL")
+    parser.add_argument(
+        "--num-samples", type=int, default=5, help="Number of pairs to test"
+    )
+    parser.add_argument("--api-key", default=None, help="API key for authentication")
+    parser.add_argument(
+        "--key-password", default=None, help="Password to decrypt the secret key file"
+    )
     args = parser.parse_args()
 
     # Get API key from env if not passed as arg
@@ -159,14 +159,12 @@ def main():
     logger.info("Server is healthy.")
 
     # Setup circuit breaker for repeated failures
-    cb = CircuitBreaker(failure_threshold=3, recovery_timeout=30,
-                        name="server")
+    cb = CircuitBreaker(failure_threshold=3, recovery_timeout=30, name="server")
 
     logger.info("Initializing FHE scheme and loading server key...")
     t0 = time.time()
-    scheme = setup_client(config_path, sk_path,
-                          key_password=args.key_password)
-    logger.info(f"Ready ({time.time()-t0:.2f}s)")
+    scheme = setup_client(config_path, sk_path, key_password=args.key_password)
+    logger.info(f"Ready ({time.time() - t0:.2f}s)")
 
     # Get input_level from server
     headers = {}
@@ -174,11 +172,11 @@ def main():
         headers["Authorization"] = f"Bearer {api_key}"
 
     info_resp = http_requests.get(
-        f"{args.url}/api/v1/info", headers=headers, timeout=10).json()
+        f"{args.url}/api/v1/info", headers=headers, timeout=10
+    ).json()
     input_level = info_resp["input_level"]
     model_version = info_resp.get("model_version", "unknown")
-    logger.info(f"Server input level: {input_level}, "
-                f"model version: {model_version}")
+    logger.info(f"Server input level: {input_level}, model version: {model_version}")
 
     # Load test samples
     samples = np.load(os.path.join(demo_dir, "test_samples.npz"))
@@ -187,14 +185,14 @@ def main():
     labels = ["Diff Speaker", "Same Speaker"]
     results = []
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  Private Speaker Verification ({args.num_samples} pairs)")
     print(f"  Server: {args.url}")
     print(f"  Auth: {'enabled' if api_key else 'disabled'}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     for i in range(min(args.num_samples, len(X_test))):
-        sample_data = torch.tensor(X_test[i:i+1], dtype=torch.float32)
+        sample_data = torch.tensor(X_test[i : i + 1], dtype=torch.float32)
         actual = int(y_test[i])
 
         # Encrypt locally
@@ -202,17 +200,15 @@ def main():
         payload = encrypt_sample(sample_data, input_level)
         t_enc = time.time() - t0
 
-        ct_size = sum(len(base64.b64decode(b))
-                      for b in payload["ciphertexts"])
+        ct_size = sum(len(base64.b64decode(b)) for b in payload["ciphertexts"])
 
         # Send to server (with circuit breaker)
         try:
             t0 = time.time()
-            response = cb.call(
-                send_for_inference, args.url, payload, api_key)
+            response = cb.call(send_for_inference, args.url, payload, api_key)
             t_server = time.time() - t0
         except Exception as e:
-            logger.error(f"Pair {i+1}: Server error: {e}")
+            logger.error(f"Pair {i + 1}: Server error: {e}")
             continue
 
         t_inf = response.get("inference_time", 0)
@@ -226,21 +222,25 @@ def main():
         results.append((pred, actual))
 
         status = "correct" if pred == actual else "WRONG"
-        print(f"  Pair {i+1}: {labels[pred]:>14s}  "
-              f"(actual: {labels[actual]:>14s}) [{status}]")
-        print(f"    Encrypt: {t_enc:.3f}s | "
-              f"Network: {t_server:.3f}s (inference: {t_inf:.3f}s) | "
-              f"Decrypt: {t_dec:.3f}s | "
-              f"Ciphertext: {ct_size/1024:.0f} KB")
+        print(
+            f"  Pair {i + 1}: {labels[pred]:>14s}  "
+            f"(actual: {labels[actual]:>14s}) [{status}]"
+        )
+        print(
+            f"    Encrypt: {t_enc:.3f}s | "
+            f"Network: {t_server:.3f}s (inference: {t_inf:.3f}s) | "
+            f"Decrypt: {t_dec:.3f}s | "
+            f"Ciphertext: {ct_size / 1024:.0f} KB"
+        )
 
     if results:
         correct = sum(1 for p, a in results if p == a)
         total = len(results)
-        print(f"\n{'='*60}")
-        print(f"  FHE Accuracy: {correct}/{total} ({correct/total:.0%})")
+        print(f"\n{'=' * 60}")
+        print(f"  FHE Accuracy: {correct}/{total} ({correct / total:.0%})")
         print(f"  The server verified {total} speaker pairs without")
-        print(f"  ever hearing the audio or seeing the result.")
-        print(f"{'='*60}")
+        print("  ever hearing the audio or seeing the result.")
+        print(f"{'=' * 60}")
 
     scheme.delete_scheme()
 

@@ -30,18 +30,22 @@ from sklearn.metrics import accuracy_score
 from torch.utils.data import TensorDataset, DataLoader
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..",
-                                "orion", "repo"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "orion", "repo"))
 
 import orion
 import orion.nn as on
 
-from speaker_verify.dataset import (download_librispeech, scan_speakers,
-                                     generate_pairs, build_dataset)
+from speaker_verify.dataset import (
+    download_librispeech,
+    scan_speakers,
+    generate_pairs,
+    build_dataset,
+)
 
 
 class AblationNet(on.Module):
     """MLP with configurable activation for ablation study."""
+
     def __init__(self, input_dim=40, activation="gelu"):
         super().__init__()
         self.fc1 = on.Linear(input_dim, 128)
@@ -67,15 +71,15 @@ class AblationNet(on.Module):
         return x
 
 
-def train_ablation_model(X_train, y_train, X_val, y_val, activation,
-                         epochs=200, lr=1e-3, noise_std=0.3):
+def train_ablation_model(
+    X_train, y_train, X_val, y_val, activation, epochs=200, lr=1e-3, noise_std=0.3
+):
     """Train a model with given activation and return metrics."""
     model = AblationNet(input_dim=X_train.shape[1], activation=activation)
 
     X_t = torch.tensor(X_train, dtype=torch.float32)
     y_t = torch.tensor(y_train, dtype=torch.long)
     X_v = torch.tensor(X_val, dtype=torch.float32)
-    y_v = torch.tensor(y_val, dtype=torch.long)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     criterion = torch.nn.CrossEntropyLoss()
@@ -131,8 +135,9 @@ def run_fhe_evaluation(model, X_test, y_test, config_path, num_samples=5):
         clear_out = model(X_all)
         clear_preds = clear_out.argmax(dim=1).numpy()
 
-    clear_correct = sum(1 for i in range(num_samples)
-                        if clear_preds[i] == int(y_test[i]))
+    clear_correct = sum(
+        1 for i in range(num_samples) if clear_preds[i] == int(y_test[i])
+    )
 
     # FHE
     scheme = orion.init_scheme(config_path)
@@ -146,7 +151,7 @@ def run_fhe_evaluation(model, X_test, y_test, config_path, num_samples=5):
     bits_list = []
 
     for i in range(num_samples):
-        sample = torch.tensor(X_test[i:i+1], dtype=torch.float32)
+        sample = torch.tensor(X_test[i : i + 1], dtype=torch.float32)
 
         ptxt = orion.encode(sample, input_level)
         ctxt = orion.encrypt(ptxt)
@@ -166,13 +171,11 @@ def run_fhe_evaluation(model, X_test, y_test, config_path, num_samples=5):
         with torch.no_grad():
             c_out = model(sample).flatten()[:2]
         mae = (c_out - fhe_out).abs().mean().item()
-        bits = -math.log2(mae) if mae > 0 else float('inf')
+        bits = -math.log2(mae) if mae > 0 else float("inf")
         bits_list.append(bits)
 
-    fhe_correct = sum(1 for i in range(num_samples)
-                      if fhe_preds[i] == int(y_test[i]))
-    agree = sum(1 for i in range(num_samples)
-                if fhe_preds[i] == clear_preds[i])
+    fhe_correct = sum(1 for i in range(num_samples) if fhe_preds[i] == int(y_test[i]))
+    agree = sum(1 for i in range(num_samples) if fhe_preds[i] == clear_preds[i])
 
     scheme.delete_scheme()
 
@@ -192,18 +195,26 @@ def run_fhe_evaluation(model, X_test, y_test, config_path, num_samples=5):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Activation Function Ablation Study for FHE")
-    parser.add_argument("--data-root", default=os.path.join(
-        os.path.dirname(__file__), "..", "data"))
-    parser.add_argument("--n-pairs", type=int, default=3000,
-                        help="Training pairs per activation")
+        description="Activation Function Ablation Study for FHE"
+    )
+    parser.add_argument(
+        "--data-root", default=os.path.join(os.path.dirname(__file__), "..", "data")
+    )
+    parser.add_argument(
+        "--n-pairs", type=int, default=3000, help="Training pairs per activation"
+    )
     parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--noise-std", type=float, default=0.3)
-    parser.add_argument("--fhe-samples", type=int, default=5,
-                        help="Number of FHE test samples per activation")
-    parser.add_argument("--skip-fhe", action="store_true",
-                        help="Skip FHE evaluation (cleartext only)")
+    parser.add_argument(
+        "--fhe-samples",
+        type=int,
+        default=5,
+        help="Number of FHE test samples per activation",
+    )
+    parser.add_argument(
+        "--skip-fhe", action="store_true", help="Skip FHE evaluation (cleartext only)"
+    )
     args = parser.parse_args()
 
     torch.manual_seed(42)
@@ -221,9 +232,11 @@ def main():
     print("  Polynomial Activations under CKKS FHE for Speaker Verification")
     print("=" * 70)
     print(f"\n  Activations: {', '.join(activations)}")
-    print(f"  Architecture: 40->128->64->2 MLP")
-    print(f"  Training: {args.n_pairs} pairs, {args.epochs} epochs, "
-          f"noise_std={args.noise_std}")
+    print("  Architecture: 40->128->64->2 MLP")
+    print(
+        f"  Training: {args.n_pairs} pairs, {args.epochs} epochs, "
+        f"noise_std={args.noise_std}"
+    )
     print(f"  FHE samples: {args.fhe_samples}")
     print()
 
@@ -254,14 +267,21 @@ def main():
     results = {}
 
     for act in activations:
-        print(f"\n{'='*50}")
+        print(f"\n{'=' * 50}")
         print(f"  Training with: {act}")
-        print(f"{'='*50}")
+        print(f"{'=' * 50}")
 
         torch.manual_seed(42)
         model, val_acc, train_acc, best_epoch = train_ablation_model(
-            X_train, y_train, X_val, y_val, act,
-            epochs=args.epochs, lr=args.lr, noise_std=args.noise_std)
+            X_train,
+            y_train,
+            X_val,
+            y_val,
+            act,
+            epochs=args.epochs,
+            lr=args.lr,
+            noise_std=args.noise_std,
+        )
 
         print(f"  Train acc: {train_acc:.4f}")
         print(f"  Val acc:   {val_acc:.4f} (epoch {best_epoch})")
@@ -276,46 +296,69 @@ def main():
         if not args.skip_fhe:
             print(f"\n  Running FHE evaluation ({args.fhe_samples} samples)...")
             fhe_metrics = run_fhe_evaluation(
-                model, X_val, y_val, config_path, args.fhe_samples)
+                model, X_val, y_val, config_path, args.fhe_samples
+            )
             entry.update(fhe_metrics)
 
-            print(f"  FHE accuracy:  {fhe_metrics['fhe_correct']}/{fhe_metrics['num_samples']} "
-                  f"({fhe_metrics['fhe_accuracy']:.0%})")
-            print(f"  Agreement:     {fhe_metrics['agree_count']}/{fhe_metrics['num_samples']}")
-            print(f"  Precision:     {fhe_metrics['avg_bits']:.1f} bits avg, "
-                  f"{fhe_metrics['min_bits']:.1f} bits min")
+            print(
+                f"  FHE accuracy:  {fhe_metrics['fhe_correct']}/{fhe_metrics['num_samples']} "
+                f"({fhe_metrics['fhe_accuracy']:.0%})"
+            )
+            print(
+                f"  Agreement:     {fhe_metrics['agree_count']}/{fhe_metrics['num_samples']}"
+            )
+            print(
+                f"  Precision:     {fhe_metrics['avg_bits']:.1f} bits avg, "
+                f"{fhe_metrics['min_bits']:.1f} bits min"
+            )
             print(f"  Inference:     {fhe_metrics['avg_time']:.1f}s avg")
             print(f"  Input level:   {fhe_metrics['input_level']}")
 
         results[act] = entry
 
     # Results table
-    print(f"\n\n{'='*70}")
-    print(f"  ABLATION RESULTS SUMMARY")
-    print(f"{'='*70}")
+    print(f"\n\n{'=' * 70}")
+    print("  ABLATION RESULTS SUMMARY")
+    print(f"{'=' * 70}")
 
     if args.skip_fhe:
-        print(f"\n  {'Activation':<12s} | {'Val Acc':>8s} | {'Train Acc':>9s} | {'Epoch':>5s}")
-        print(f"  {'-'*12}-+-{'-'*8}-+-{'-'*9}-+-{'-'*5}")
+        print(
+            f"\n  {'Activation':<12s} | {'Val Acc':>8s} | {'Train Acc':>9s} | {'Epoch':>5s}"
+        )
+        print(f"  {'-' * 12}-+-{'-' * 8}-+-{'-' * 9}-+-{'-' * 5}")
         for act, r in results.items():
-            print(f"  {act:<12s} | {r['val_acc']:>7.1%} | {r['train_acc']:>8.1%} | {r['best_epoch']:>5d}")
+            print(
+                f"  {act:<12s} | {r['val_acc']:>7.1%} | {r['train_acc']:>8.1%} | {r['best_epoch']:>5d}"
+            )
     else:
-        print(f"\n  {'Activation':<12s} | {'Val Acc':>8s} | {'FHE Acc':>8s} | {'Agree':>6s} | "
-              f"{'Bits':>6s} | {'Time':>6s} | {'Level':>5s}")
-        print(f"  {'-'*12}-+-{'-'*8}-+-{'-'*8}-+-{'-'*6}-+-{'-'*6}-+-{'-'*6}-+-{'-'*5}")
+        print(
+            f"\n  {'Activation':<12s} | {'Val Acc':>8s} | {'FHE Acc':>8s} | {'Agree':>6s} | "
+            f"{'Bits':>6s} | {'Time':>6s} | {'Level':>5s}"
+        )
+        print(
+            f"  {'-' * 12}-+-{'-' * 8}-+-{'-' * 8}-+-{'-' * 6}-+-{'-' * 6}-+-{'-' * 6}-+-{'-' * 5}"
+        )
         for act, r in results.items():
-            print(f"  {act:<12s} | {r['val_acc']:>7.1%} | {r['fhe_accuracy']:>7.0%} | "
-                  f"{r['agree_count']:>2d}/{r['num_samples']:<2d} | "
-                  f"{r['avg_bits']:>5.1f} | {r['avg_time']:>5.1f}s | {r['input_level']:>5d}")
+            print(
+                f"  {act:<12s} | {r['val_acc']:>7.1%} | {r['fhe_accuracy']:>7.0%} | "
+                f"{r['agree_count']:>2d}/{r['num_samples']:<2d} | "
+                f"{r['avg_bits']:>5.1f} | {r['avg_time']:>5.1f}s | {r['input_level']:>5d}"
+            )
 
-    print(f"\n  Key findings:")
+    print("\n  Key findings:")
     if not args.skip_fhe:
-        best_fhe = max(results.values(), key=lambda r: r.get('fhe_accuracy', 0))
-        worst_fhe = min(results.values(), key=lambda r: r.get('fhe_accuracy', 1))
-        best_bits = max(results.values(), key=lambda r: r.get('avg_bits', 0))
-        print(f"    Best FHE accuracy:  {best_fhe['activation']} ({best_fhe['fhe_accuracy']:.0%})")
-        print(f"    Worst FHE accuracy: {worst_fhe['activation']} ({worst_fhe['fhe_accuracy']:.0%})")
-        print(f"    Best precision:     {best_bits['activation']} ({best_bits['avg_bits']:.1f} bits)")
+        best_fhe = max(results.values(), key=lambda r: r.get("fhe_accuracy", 0))
+        worst_fhe = min(results.values(), key=lambda r: r.get("fhe_accuracy", 1))
+        best_bits = max(results.values(), key=lambda r: r.get("avg_bits", 0))
+        print(
+            f"    Best FHE accuracy:  {best_fhe['activation']} ({best_fhe['fhe_accuracy']:.0%})"
+        )
+        print(
+            f"    Worst FHE accuracy: {worst_fhe['activation']} ({worst_fhe['fhe_accuracy']:.0%})"
+        )
+        print(
+            f"    Best precision:     {best_bits['activation']} ({best_bits['avg_bits']:.1f} bits)"
+        )
 
     # Save results
     results_path = os.path.join(demo_dir, "ablation_results.json")

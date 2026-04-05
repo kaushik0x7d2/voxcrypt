@@ -13,8 +13,17 @@ from sklearn.metrics import accuracy_score
 from torch.utils.data import TensorDataset, DataLoader
 
 
-def train_model(X, y, model, epochs=200, lr=1e-3, val_split=0.2,
-                batch_size=32, seed=42, noise_std=0.0):
+def train_model(
+    X,
+    y,
+    model,
+    epochs=200,
+    lr=1e-3,
+    val_split=0.2,
+    batch_size=32,
+    seed=42,
+    noise_std=0.0,
+):
     """
     Train a classification model.
 
@@ -63,7 +72,8 @@ def train_model(X, y, model, epochs=200, lr=1e-3, val_split=0.2,
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='max', patience=30, factor=0.5, verbose=False)
+        optimizer, mode="max", patience=30, factor=0.5, verbose=False
+    )
 
     best_acc = 0.0
     best_state = None
@@ -104,11 +114,15 @@ def train_model(X, y, model, epochs=200, lr=1e-3, val_split=0.2,
             patience_counter += 1
 
         if (epoch + 1) % 20 == 0:
-            print(f"  Epoch {epoch+1:3d} | Loss: {total_loss/len(train_loader):.4f} | Val Acc: {val_acc:.4f}")
+            print(
+                f"  Epoch {epoch + 1:3d} | Loss: {total_loss / len(train_loader):.4f} | Val Acc: {val_acc:.4f}"
+            )
 
         if patience_counter >= early_stop_patience:
-            print(f"  Early stopping at epoch {epoch+1} "
-                  f"(no improvement for {early_stop_patience} epochs)")
+            print(
+                f"  Early stopping at epoch {epoch + 1} "
+                f"(no improvement for {early_stop_patience} epochs)"
+            )
             break
 
     model.load_state_dict(best_state)

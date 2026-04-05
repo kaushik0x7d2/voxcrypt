@@ -7,11 +7,11 @@ Exposes a /metrics-compatible text endpoint.
 
 import threading
 import time
-import math
 
 
 class Counter:
     """Thread-safe monotonically increasing counter."""
+
     def __init__(self, name, description=""):
         self.name = name
         self.description = description
@@ -29,6 +29,7 @@ class Counter:
 
 class Gauge:
     """Thread-safe gauge (can go up and down)."""
+
     def __init__(self, name, description=""):
         self.name = name
         self.description = description
@@ -54,6 +55,7 @@ class Gauge:
 
 class Histogram:
     """Thread-safe histogram with summary statistics."""
+
     def __init__(self, name, description=""):
         self.name = name
         self.description = description
@@ -92,28 +94,23 @@ class MetricsRegistry:
         self.start_time = time.time()
 
         # Inference metrics
-        self.inference_total = Counter(
-            "inference_total", "Total inference requests")
-        self.inference_errors = Counter(
-            "inference_errors", "Total inference errors")
+        self.inference_total = Counter("inference_total", "Total inference requests")
+        self.inference_errors = Counter("inference_errors", "Total inference errors")
         self.inference_duration = Histogram(
-            "inference_duration_seconds", "Inference duration in seconds")
+            "inference_duration_seconds", "Inference duration in seconds"
+        )
 
         # Request metrics
-        self.requests_total = Counter(
-            "requests_total", "Total HTTP requests")
-        self.active_requests = Gauge(
-            "active_requests", "Currently active requests")
-        self.auth_failures = Counter(
-            "auth_failures", "Authentication failures")
-        self.rate_limit_hits = Counter(
-            "rate_limit_hits", "Rate limit rejections")
+        self.requests_total = Counter("requests_total", "Total HTTP requests")
+        self.active_requests = Gauge("active_requests", "Currently active requests")
+        self.auth_failures = Counter("auth_failures", "Authentication failures")
+        self.rate_limit_hits = Counter("rate_limit_hits", "Rate limit rejections")
 
         # FHE metrics
         self.ciphertext_size = Histogram(
-            "ciphertext_size_bytes", "Ciphertext payload size")
-        self.precision_bits = Histogram(
-            "precision_bits", "FHE precision in bits")
+            "ciphertext_size_bytes", "Ciphertext payload size"
+        )
+        self.precision_bits = Histogram("precision_bits", "FHE precision in bits")
 
     @property
     def uptime(self):
@@ -141,9 +138,9 @@ class MetricsRegistry:
     def to_text(self):
         """Export metrics in Prometheus-compatible text format."""
         lines = []
-        lines.append(f"# HELP uptime_seconds Server uptime")
+        lines.append("# HELP uptime_seconds Server uptime")
         lines.append(f"uptime_seconds {self.uptime:.1f}")
-        lines.append(f"# HELP inference_total Total inferences")
+        lines.append("# HELP inference_total Total inferences")
         lines.append(f"inference_total {self.inference_total.value}")
         lines.append(f"inference_errors {self.inference_errors.value}")
         lines.append(f"inference_duration_avg {self.inference_duration.avg:.3f}")

@@ -1,10 +1,14 @@
 """Tests for security middleware."""
 
-import pytest
 from unittest.mock import MagicMock
 from speaker_verify.security import (
-    APIKeyAuth, RateLimiter, InputValidator,
-    encrypt_key_file, decrypt_key_file, hash_key)
+    APIKeyAuth,
+    RateLimiter,
+    InputValidator,
+    encrypt_key_file,
+    decrypt_key_file,
+    hash_key,
+)
 
 
 class TestAPIKeyAuth:
@@ -102,15 +106,13 @@ class TestInputValidator:
 
     def test_invalid_base64(self):
         v = InputValidator()
-        data = {"ciphertexts": ["not-base64!!!"],
-                "shape": [1], "on_shape": [1]}
+        data = {"ciphertexts": ["not-base64!!!"], "shape": [1], "on_shape": [1]}
         ok, err = v.validate_predict_request(data)
         assert ok is False
 
     def test_invalid_shape(self):
         v = InputValidator()
-        data = {"ciphertexts": ["dGVzdA=="],
-                "shape": [-1], "on_shape": [1]}
+        data = {"ciphertexts": ["dGVzdA=="], "shape": [-1], "on_shape": [1]}
         ok, err = v.validate_predict_request(data)
         assert ok is False
 
@@ -136,4 +138,4 @@ class TestKeyManagement:
         assert hash_key(b"key1") != hash_key(b"key2")
 
 
-import os
+import os  # noqa: E402

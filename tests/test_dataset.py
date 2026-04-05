@@ -1,7 +1,5 @@
 """Unit tests for dataset utilities."""
 
-import os
-
 import numpy as np
 
 from speaker_verify.dataset import scan_speakers, generate_pairs, build_dataset
@@ -36,8 +34,8 @@ class TestGeneratePairs:
     def test_balanced(self, mock_librispeech):
         speakers = scan_speakers(mock_librispeech)
         pairs = generate_pairs(speakers, n_pairs=100)
-        n_same = sum(1 for _, _, l in pairs if l == 1)
-        n_diff = sum(1 for _, _, l in pairs if l == 0)
+        n_same = sum(1 for _, _, lbl in pairs if lbl == 1)
+        n_diff = sum(1 for _, _, lbl in pairs if lbl == 0)
         assert n_same == 50
         assert n_diff == 50
 
@@ -77,5 +75,5 @@ class TestBuildDataset:
         speakers = scan_speakers(mock_librispeech)
         pairs = generate_pairs(speakers, n_pairs=10)
         _, y = build_dataset(pairs)
-        expected = np.array([l for _, _, l in pairs], dtype=np.float32)
+        expected = np.array([lbl for _, _, lbl in pairs], dtype=np.float32)
         np.testing.assert_array_equal(y, expected)

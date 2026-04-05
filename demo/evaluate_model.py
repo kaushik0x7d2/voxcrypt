@@ -17,12 +17,10 @@ import torch
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..",
-                                "orion", "repo"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "orion", "repo"))
 
 from speaker_verify.model import SpeakerVerifyNet
-from speaker_verify.evaluation import (
-    compute_scores, evaluation_report, compute_far_frr)
+from speaker_verify.evaluation import compute_scores, evaluation_report
 
 
 def main():
@@ -59,8 +57,10 @@ def main():
     X_test, y_test = samples["X"], samples["y"]
 
     print(f"Evaluating model: {args.model}")
-    print(f"Test samples: {len(X_test)} ({int(sum(y_test))} same, "
-          f"{int(len(y_test) - sum(y_test))} different)")
+    print(
+        f"Test samples: {len(X_test)} ({int(sum(y_test))} same, "
+        f"{int(len(y_test) - sum(y_test))} different)"
+    )
 
     # Compute scores
     scores = compute_scores(model, X_test, scaler)
@@ -68,10 +68,10 @@ def main():
     # Full evaluation
     report = evaluation_report(scores, y_test.astype(int))
 
-    print(f"\n{'='*50}")
-    print(f"  EVALUATION REPORT")
-    print(f"{'='*50}")
-    print(f"  EER:                    {report['eer']:.4f} ({report['eer']*100:.2f}%)")
+    print(f"\n{'=' * 50}")
+    print("  EVALUATION REPORT")
+    print(f"{'=' * 50}")
+    print(f"  EER:                    {report['eer']:.4f} ({report['eer'] * 100:.2f}%)")
     print(f"  EER threshold:          {report['eer_threshold']:.4f}")
     print(f"  Accuracy @ EER:         {report['accuracy_at_eer']:.4f}")
     print(f"  Accuracy @ argmax:      {report['accuracy_at_argmax']:.4f}")

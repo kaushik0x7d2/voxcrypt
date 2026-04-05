@@ -3,14 +3,14 @@
 import sys
 import os
 
+import pytest
 import torch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..",
-                                "orion", "repo"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "orion", "repo"))
 
-import orion.nn as on
-from speaker_verify.model import SpeakerVerifyNet
+on = pytest.importorskip("orion.nn")
+from speaker_verify.model import SpeakerVerifyNet  # noqa: E402
 
 
 class TestSpeakerVerifyNet:

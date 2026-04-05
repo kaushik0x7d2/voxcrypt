@@ -6,7 +6,6 @@ Supports JSON format (for production log aggregation) and text format (for devel
 
 import json
 import logging
-import time
 import threading
 import uuid
 
@@ -61,8 +60,10 @@ class TextFormatter(logging.Formatter):
     def format(self, record):
         request_id = get_request_id()
         rid = f"[{request_id}] " if request_id else ""
-        return f"{self.formatTime(record)} {record.levelname:>8s} {rid}" \
-               f"{record.name}: {record.getMessage()}"
+        return (
+            f"{self.formatTime(record)} {record.levelname:>8s} {rid}"
+            f"{record.name}: {record.getMessage()}"
+        )
 
 
 def setup_logging(level="INFO", fmt="json", log_file=""):

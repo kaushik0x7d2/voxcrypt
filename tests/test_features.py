@@ -3,7 +3,12 @@
 import numpy as np
 import soundfile as sf
 
-from speaker_verify.features import extract_mfcc, utterance_embedding, pair_features, audio_to_embedding
+from speaker_verify.features import (
+    extract_mfcc,
+    utterance_embedding,
+    pair_features,
+    audio_to_embedding,
+)
 
 
 class TestExtractMFCC:

@@ -7,17 +7,12 @@ Skip with: pytest -m "not e2e"
 
 import os
 import sys
-import time
-import subprocess
-import signal
 
 import pytest
 import torch
-import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..",
-                                "orion", "repo"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "orion", "repo"))
 
 
 @pytest.mark.e2e
@@ -35,9 +30,7 @@ class TestEndToEnd:
         )
 
         # Run FHE inference
-        scheme, input_level = init_fhe(
-            fhe_config, model, trained_model["sample_path"]
-        )
+        scheme, input_level = init_fhe(fhe_config, model, trained_model["sample_path"])
 
         X_val = trained_model["X_val"]
         y_val = trained_model["y_val"]
@@ -47,7 +40,7 @@ class TestEndToEnd:
         total_time = 0
 
         for i in range(n_test):
-            sample = torch.tensor(X_val[i:i+1], dtype=torch.float32)
+            sample = torch.tensor(X_val[i : i + 1], dtype=torch.float32)
             actual = int(y_val[i])
             pred, _, elapsed, bits = fhe_predict(model, sample, input_level)
 

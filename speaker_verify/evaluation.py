@@ -132,8 +132,6 @@ def evaluation_report(scores, labels):
     preds_argmax = (scores >= 0.5).astype(int)
     accuracy_argmax = np.mean(preds_argmax == labels)
 
-    result = compute_far_frr(scores, labels)
-
     return {
         "eer": float(eer),
         "eer_threshold": float(eer_threshold),

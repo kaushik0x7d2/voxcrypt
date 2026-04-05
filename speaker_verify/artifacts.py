@@ -9,8 +9,6 @@ import json
 import os
 import time
 
-import numpy as np
-
 
 def compute_file_hash(filepath):
     """Compute SHA-256 hash of a file."""
@@ -44,9 +42,18 @@ class ModelManifest:
         self.fhe_compatible = True
 
     @classmethod
-    def create(cls, model_path, scaler_path=None, samples_path=None,
-               architecture="", training_config=None, metrics=None,
-               version=None, input_dim=40, output_dim=2):
+    def create(
+        cls,
+        model_path,
+        scaler_path=None,
+        samples_path=None,
+        architecture="",
+        training_config=None,
+        metrics=None,
+        version=None,
+        input_dim=40,
+        output_dim=2,
+    ):
         """Create a manifest for a set of model artifacts."""
         manifest = cls()
         manifest.version = version or f"v-{int(time.time())}"
@@ -120,7 +127,8 @@ class ModelManifest:
                     errors.append(
                         f"Model hash mismatch: expected "
                         f"{self.file_hashes['model'][:16]}..., "
-                        f"got {actual[:16]}...")
+                        f"got {actual[:16]}..."
+                    )
 
         if "scaler" in self.file_hashes and scaler_path:
             if not os.path.exists(scaler_path):

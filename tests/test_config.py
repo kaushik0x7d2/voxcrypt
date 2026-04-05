@@ -1,6 +1,5 @@
 """Tests for configuration management."""
 
-import os
 import pytest
 from speaker_verify.config import Config
 

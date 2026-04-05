@@ -12,8 +12,10 @@ logger = get_logger("errors")
 
 # --- Custom Exceptions ---
 
+
 class OrionVoiceError(Exception):
     """Base exception for Orion Voice."""
+
     status_code = 500
     error_code = "INTERNAL_ERROR"
 
@@ -59,6 +61,7 @@ class ServiceUnavailableError(OrionVoiceError):
 
 # --- Error Response Builder ---
 
+
 def error_response(error_code, message, status_code, details=None):
     """Build a consistent error response."""
     body = {
@@ -76,13 +79,15 @@ def error_response(error_code, message, status_code, details=None):
 
 # --- Flask Error Handler Registration ---
 
+
 def register_error_handlers(app):
     """Register error handlers on a Flask app."""
 
     @app.errorhandler(OrionVoiceError)
     def handle_orion_error(e):
-        logger.error(f"{e.error_code}: {e.message}",
-                     extra={"extra_data": {"details": e.details}})
+        logger.error(
+            f"{e.error_code}: {e.message}", extra={"extra_data": {"details": e.details}}
+        )
         resp = error_response(e.error_code, e.message, e.status_code, e.details)
         if isinstance(e, RateLimitError):
             resp[0].headers["Retry-After"] = str(e.retry_after)

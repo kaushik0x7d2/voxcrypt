@@ -8,8 +8,7 @@ Uses GELU activation (matching Orion's cancer demo which achieves 95% FHE accura
 import sys
 import os
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..",
-                                "orion", "repo"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "orion", "repo"))
 import orion.nn as on
 
 
@@ -21,6 +20,7 @@ class SpeakerVerifyNet(on.Module):
     Architecture matches Orion's proven cancer demo (30->128->64->2, GELU).
     GELU provides better FHE numerical stability than SiLU.
     """
+
     def __init__(self, input_dim=40):
         super().__init__()
         self.fc1 = on.Linear(input_dim, 128)
@@ -50,6 +50,7 @@ class EncryptedVerifyNet(on.Module):
     with encrypted biometric template comparison, improving over Nautsch
     et al. (2018) which used Paillier partial HE with fixed distance metrics.
     """
+
     def __init__(self, input_dim=80):
         super().__init__()
         self.fc1 = on.Linear(input_dim, 128)
@@ -70,6 +71,7 @@ class SpeakerIDNet(on.Module):
     MLP for speaker identification (who is speaking?).
     40 features -> 128 -> 64 -> n_speakers
     """
+
     def __init__(self, input_dim=40, n_speakers=40):
         super().__init__()
         self.fc1 = on.Linear(input_dim, 128)
@@ -90,6 +92,7 @@ class GenderNet(on.Module):
     MLP for gender classification from voice.
     40 features -> 64 -> 32 -> 2 (male/female)
     """
+
     def __init__(self, input_dim=40):
         super().__init__()
         self.fc1 = on.Linear(input_dim, 64)
@@ -110,6 +113,7 @@ class EmotionNet(on.Module):
     MLP for emotion detection from voice.
     40 features -> 128 -> 64 -> n_emotions
     """
+
     def __init__(self, input_dim=40, n_emotions=7):
         super().__init__()
         self.fc1 = on.Linear(input_dim, 128)
