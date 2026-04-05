@@ -33,6 +33,8 @@ def main():
                         help="Training epochs")
     parser.add_argument("--lr", type=float, default=1e-3,
                         help="Learning rate")
+    parser.add_argument("--noise-std", type=float, default=0.3,
+                        help="FHE-aware noise injection std (0=off)")
     parser.add_argument("--n-mfcc", type=int, default=20,
                         help="Number of MFCC coefficients")
     args = parser.parse_args()
@@ -67,7 +69,7 @@ def main():
     print(f"\nTraining SpeakerVerifyNet (input_dim={X.shape[1]})...")
     model = SpeakerVerifyNet(input_dim=X.shape[1])
     model, scaler, metrics, X_val, y_val = train_model(
-        X, y, model, epochs=args.epochs, lr=args.lr
+        X, y, model, epochs=args.epochs, lr=args.lr, noise_std=args.noise_std
     )
 
     print(f"\nBest validation accuracy: {metrics['val_acc']:.4f} (epoch {metrics['best_epoch']})")

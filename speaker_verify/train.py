@@ -1,5 +1,7 @@
 """
-Training utilities for speaker verification model.
+Training utilities for all audio classification models.
+
+Supports FHE-aware noise injection for improved encrypted inference accuracy.
 """
 
 import torch
@@ -12,24 +14,28 @@ from torch.utils.data import TensorDataset, DataLoader
 
 
 def train_model(X, y, model, epochs=200, lr=1e-3, val_split=0.2,
-                batch_size=32, seed=42):
+                batch_size=32, seed=42, noise_std=0.0):
     """
-    Train the speaker verification model.
+    Train a classification model.
 
     Args:
-        X: np.ndarray of shape (n, input_dim) — pair feature vectors.
-        y: np.ndarray of shape (n,) — labels (1=same, 0=different).
-        model: SpeakerVerifyNet instance.
+        X: np.ndarray of shape (n, input_dim) — feature vectors.
+        y: np.ndarray of shape (n,) — labels.
+        model: orion.nn.Module instance.
         epochs: Number of training epochs.
         lr: Learning rate.
         val_split: Fraction of data for validation.
         batch_size: Batch size.
         seed: Random seed.
+        noise_std: Gaussian noise std added to features during training.
+            Simulates FHE precision loss for wider decision margins.
 
     Returns:
         model: Trained model (best validation accuracy state).
         scaler: Fitted StandardScaler.
         metrics: dict with train_acc, val_acc, best_epoch.
+        X_val: Validation features (scaled).
+        y_val: Validation labels.
     """
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -65,6 +71,11 @@ def train_model(X, y, model, epochs=200, lr=1e-3, val_split=0.2,
         model.train()
         total_loss = 0
         for batch_X, batch_y in train_loader:
+            # FHE-aware noise injection during training
+            if noise_std > 0:
+                noise = torch.randn_like(batch_X) * noise_std
+                batch_X = batch_X + noise
+
             optimizer.zero_grad()
             output = model(batch_X)
             loss = criterion(output, batch_y.long())

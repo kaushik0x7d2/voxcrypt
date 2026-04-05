@@ -135,7 +135,7 @@ def main():
     print(f"  FHE Accuracy:         {correct}/{num_samples} ({correct/num_samples:.0%})")
     print(f"  FHE-Clear Agreement:  {agree}/{num_samples}")
     print(f"  Avg Inference Time:   {np.mean(times):.1f}s per pair")
-    print(f"  Model:                SpeakerVerifyNet (40->128->64->2, SiLU)")
+    print(f"  Model:                SpeakerVerifyNet (40->128->64->2, GELU)")
 
     scheme.delete_scheme()
 

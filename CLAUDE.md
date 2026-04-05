@@ -37,7 +37,7 @@ Client                              Server
    - Normalize with saved StandardScaler
 
 2. **FHE inference** (server-side, encrypted):
-   - Model: `SpeakerVerifyNet` — 40→128→64→2 MLP with SiLU (degree=7)
+   - Model: `SpeakerVerifyNet` — 40→128→64→2 MLP with GELU
    - CKKS scheme via Orion/Lattigo backend
    - Config: reuse heart_config.yml params (LogN=14, same depth profile)
    - Expected FHE time: ~15-20s per verification pair
@@ -91,8 +91,8 @@ orion-voice/
 ## Key Design Decisions
 
 - **Feature: |MFCC_A - MFCC_B| (40-dim)** not concatenation (80-dim). Halves input size → faster FHE. Cleaner privacy semantics.
-- **Activation: SiLU degree=7**. Smoother polynomial approximation than GELU. Heart disease demo got 100% FHE accuracy with SiLU.
-- **Model depth: 3 Linear + 2 SiLU = ~11 multiplicative levels**. Fits within LogN=14 CKKS config.
+- **Activation: GELU**. Orion's cancer demo achieves 95% FHE accuracy with GELU. SiLU(degree=7) gives poor FHE precision (-3 bits) while GELU gives positive precision (+4-6 bits).
+- **Model depth: 3 Linear + 2 GELU = ~13 multiplicative levels**. Fits within LogN=14 CKKS config.
 - **Dataset: LibriSpeech test-clean** (~350MB, auto-download via torchaudio). No registration needed unlike VoxCeleb.
 - **Simple MFCC features** (not deep embeddings). Intentional — keeps model small enough for FHE. Accuracy will be 75-85%, not SOTA. The point is encrypted inference, not SOTA speaker verification.
 
@@ -154,9 +154,9 @@ class SpeakerVerifyNet(on.Module):
     def __init__(self, input_dim=40):
         super().__init__()
         self.fc1 = on.Linear(input_dim, 128)
-        self.act1 = on.SiLU(degree=7)
+        self.act1 = on.GELU()
         self.fc2 = on.Linear(128, 64)
-        self.act2 = on.SiLU(degree=7)
+        self.act2 = on.GELU()
         self.fc3 = on.Linear(64, 2)
 
     def forward(self, x):

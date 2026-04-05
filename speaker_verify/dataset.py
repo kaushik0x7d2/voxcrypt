@@ -1,8 +1,8 @@
 """
-Dataset utilities for speaker verification.
+Dataset utilities for speaker verification and related tasks.
 
 Handles LibriSpeech download, speaker scanning, pair generation,
-and feature extraction for training.
+gender metadata parsing, and feature extraction for training.
 """
 
 import os
@@ -71,6 +71,36 @@ def scan_speakers(root, subset="test-clean"):
     return speakers
 
 
+def parse_gender_metadata(root):
+    """
+    Parse LibriSpeech SPEAKERS.TXT to get gender for each speaker.
+
+    Args:
+        root: Dataset root directory (contains LibriSpeech/).
+
+    Returns:
+        dict mapping speaker_id (str) -> gender ("M" or "F").
+    """
+    speakers_file = os.path.join(root, "LibriSpeech", "SPEAKERS.TXT")
+    if not os.path.exists(speakers_file):
+        raise FileNotFoundError(f"SPEAKERS.TXT not found at {speakers_file}")
+
+    gender_map = {}
+    with open(speakers_file, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith(";"):
+                continue
+            parts = [p.strip() for p in line.split("|")]
+            if len(parts) >= 2:
+                speaker_id = parts[0].strip()
+                gender = parts[1].strip()
+                if gender in ("M", "F"):
+                    gender_map[speaker_id] = gender
+
+    return gender_map
+
+
 def generate_pairs(speakers, n_pairs=2000, seed=42):
     """
     Generate balanced same-speaker / different-speaker pairs.
@@ -96,7 +126,6 @@ def generate_pairs(speakers, n_pairs=2000, seed=42):
 
     # Same-speaker pairs
     for _ in range(n_same):
-        # Pick a speaker with at least 2 utterances
         valid = [s for s in speaker_ids if len(speakers[s]) >= 2]
         if not valid:
             raise ValueError("No speaker has >= 2 utterances.")
@@ -115,7 +144,7 @@ def generate_pairs(speakers, n_pairs=2000, seed=42):
     return pairs
 
 
-def build_dataset(pairs, sr=16000, n_mfcc=20):
+def build_dataset(pairs, sr=16000, n_mfcc=20, enhanced=False):
     """
     Extract features for all pairs.
 
@@ -123,24 +152,63 @@ def build_dataset(pairs, sr=16000, n_mfcc=20):
         pairs: List of (path_a, path_b, label) tuples.
         sr: Sample rate for audio loading.
         n_mfcc: Number of MFCC coefficients.
+        enhanced: If True, use enhanced embeddings with delta MFCCs.
 
     Returns:
-        X: np.ndarray of shape (n_pairs, 2*n_mfcc) — pair feature vectors.
+        X: np.ndarray of shape (n_pairs, feat_dim) — pair feature vectors.
         y: np.ndarray of shape (n_pairs,) — labels (1=same, 0=different).
     """
-    # Cache embeddings to avoid recomputing for shared utterances
     embedding_cache = {}
     X_list = []
     y_list = []
 
     for path_a, path_b, label in tqdm(pairs, desc="Extracting features"):
         if path_a not in embedding_cache:
-            embedding_cache[path_a] = audio_to_embedding(path_a, sr=sr, n_mfcc=n_mfcc)
+            embedding_cache[path_a] = audio_to_embedding(
+                path_a, sr=sr, n_mfcc=n_mfcc, enhanced=enhanced)
         if path_b not in embedding_cache:
-            embedding_cache[path_b] = audio_to_embedding(path_b, sr=sr, n_mfcc=n_mfcc)
+            embedding_cache[path_b] = audio_to_embedding(
+                path_b, sr=sr, n_mfcc=n_mfcc, enhanced=enhanced)
 
         feat = pair_features(embedding_cache[path_a], embedding_cache[path_b])
         X_list.append(feat)
         y_list.append(label)
 
     return np.array(X_list, dtype=np.float32), np.array(y_list, dtype=np.float32)
+
+
+def build_single_utterance_dataset(speakers, sr=16000, n_mfcc=20, enhanced=False,
+                                   max_per_speaker=None):
+    """
+    Build dataset of single utterance embeddings labeled by speaker ID.
+
+    Used for speaker identification and gender classification.
+
+    Args:
+        speakers: dict mapping speaker_id -> list of audio paths.
+        sr: Sample rate.
+        n_mfcc: Number of MFCC coefficients.
+        enhanced: If True, use enhanced embeddings.
+        max_per_speaker: Limit utterances per speaker (None = use all).
+
+    Returns:
+        X: np.ndarray of shape (n_samples, feat_dim).
+        y_speaker: np.ndarray of shape (n_samples,) — speaker ID indices.
+        speaker_ids: List of speaker ID strings (index maps to y_speaker).
+    """
+    speaker_ids = sorted(speakers.keys())
+    X_list = []
+    y_list = []
+
+    for idx, sid in enumerate(tqdm(speaker_ids, desc="Processing speakers")):
+        paths = speakers[sid]
+        if max_per_speaker is not None:
+            paths = paths[:max_per_speaker]
+        for path in paths:
+            emb = audio_to_embedding(path, sr=sr, n_mfcc=n_mfcc, enhanced=enhanced)
+            X_list.append(emb)
+            y_list.append(idx)
+
+    return (np.array(X_list, dtype=np.float32),
+            np.array(y_list, dtype=np.int64),
+            speaker_ids)
