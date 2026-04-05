@@ -62,10 +62,14 @@ def train_model(X, y, model, epochs=200, lr=1e-3, val_split=0.2,
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode='max', patience=30, factor=0.5, verbose=False)
 
     best_acc = 0.0
     best_state = None
     best_epoch = 0
+    patience_counter = 0
+    early_stop_patience = 80
 
     for epoch in range(epochs):
         model.train()
@@ -89,13 +93,23 @@ def train_model(X, y, model, epochs=200, lr=1e-3, val_split=0.2,
             val_pred = val_out.argmax(dim=1).numpy()
             val_acc = accuracy_score(val_y.numpy(), val_pred)
 
+        scheduler.step(val_acc)
+
         if val_acc > best_acc:
             best_acc = val_acc
             best_state = {k: v.clone() for k, v in model.state_dict().items()}
             best_epoch = epoch + 1
+            patience_counter = 0
+        else:
+            patience_counter += 1
 
         if (epoch + 1) % 20 == 0:
             print(f"  Epoch {epoch+1:3d} | Loss: {total_loss/len(train_loader):.4f} | Val Acc: {val_acc:.4f}")
+
+        if patience_counter >= early_stop_patience:
+            print(f"  Early stopping at epoch {epoch+1} "
+                  f"(no improvement for {early_stop_patience} epochs)")
+            break
 
     model.load_state_dict(best_state)
 

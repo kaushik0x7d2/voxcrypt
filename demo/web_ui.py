@@ -1,10 +1,8 @@
 """
 Web UI for encrypted voice analysis.
 
-Provides a browser-based interface for all voice tasks:
-speaker verification, identification, gender classification, emotion detection.
-
-Supports both cleartext (fast) and FHE (encrypted) inference modes.
+Production-hardened with file validation, upload size limits,
+structured logging, and proper error handling.
 
 Usage:
     python demo/web_ui.py
@@ -14,7 +12,6 @@ Usage:
 import os
 import sys
 import time
-import json
 import tempfile
 
 import torch
@@ -26,9 +23,17 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..",
                                 "orion", "repo"))
 
 from speaker_verify.features import audio_to_embedding, pair_features
-from speaker_verify.model import SpeakerVerifyNet, SpeakerIDNet, GenderNet, EmotionNet
+from speaker_verify.model import (
+    SpeakerVerifyNet, SpeakerIDNet, GenderNet, EmotionNet)
+from speaker_verify.logging_config import setup_logging, get_logger
+from speaker_verify.security import InputValidator
+
+logger = get_logger("webui")
+_validator = InputValidator(max_payload_mb=50)
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB max upload
+
 _models = {}
 
 
@@ -98,7 +103,7 @@ def load_models(demo_dir):
             "scaler": scaler,
             "labels": labels,
         }
-        print(f"[WebUI] Loaded {task_name} model ({len(labels)} classes)")
+        logger.info(f"Loaded {task_name} model ({len(labels)} classes)")
 
 
 @app.route("/")
@@ -120,17 +125,25 @@ def api_predict():
     task = request.form.get("task", "verify")
 
     if task not in _models:
-        return jsonify({"error": f"Task '{task}' not available"}), 400
+        return jsonify({"error": f"Task '{task}' not available",
+                        "code": "INVALID_TASK"}), 400
 
     model_info = _models[task]
     model = model_info["model"]
     scaler = model_info["scaler"]
     labels = model_info["labels"]
 
-    # Handle file uploads
+    # Handle file uploads with validation
     if task == "verify":
         if "audio_a" not in request.files or "audio_b" not in request.files:
-            return jsonify({"error": "Need two audio files for verification"}), 400
+            return jsonify({"error": "Need two audio files for verification",
+                            "code": "MISSING_FILES"}), 400
+
+        for key in ("audio_a", "audio_b"):
+            ok, err = _validator.validate_audio_upload(request.files[key])
+            if not ok:
+                return jsonify({"error": err,
+                                "code": "INVALID_FILE"}), 400
 
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f_a:
             request.files["audio_a"].save(f_a.name)
@@ -145,12 +158,21 @@ def api_predict():
             emb_b = audio_to_embedding(path_b)
             features = pair_features(emb_a, emb_b)
             t_feat = time.time() - t0
+        except Exception as e:
+            logger.exception("Feature extraction failed")
+            return jsonify({"error": f"Feature extraction failed: {e}",
+                            "code": "EXTRACTION_ERROR"}), 400
         finally:
             os.unlink(path_a)
             os.unlink(path_b)
     else:
         if "audio" not in request.files:
-            return jsonify({"error": "Need an audio file"}), 400
+            return jsonify({"error": "Need an audio file",
+                            "code": "MISSING_FILE"}), 400
+
+        ok, err = _validator.validate_audio_upload(request.files["audio"])
+        if not ok:
+            return jsonify({"error": err, "code": "INVALID_FILE"}), 400
 
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
             request.files["audio"].save(f.name)
@@ -160,6 +182,10 @@ def api_predict():
             t0 = time.time()
             features = audio_to_embedding(path)
             t_feat = time.time() - t0
+        except Exception as e:
+            logger.exception("Feature extraction failed")
+            return jsonify({"error": f"Feature extraction failed: {e}",
+                            "code": "EXTRACTION_ERROR"}), 400
         finally:
             os.unlink(path)
 
@@ -176,14 +202,30 @@ def api_predict():
         pred = int(output.argmax(dim=1).item())
     t_inf = time.time() - t0
 
+    logger.info(f"Prediction: {labels[pred]} (task={task})")
+
     return jsonify({
         "task": task,
         "prediction": labels[pred],
         "prediction_idx": pred,
-        "probabilities": {labels[i]: float(probs[i]) for i in range(len(labels))},
-        "feature_time": t_feat,
-        "inference_time": t_inf,
+        "probabilities": {labels[i]: float(probs[i])
+                          for i in range(len(labels))},
+        "feature_time": round(t_feat, 4),
+        "inference_time": round(t_inf, 4),
     })
+
+
+@app.errorhandler(413)
+def handle_413(e):
+    return jsonify({"error": "File too large (max 50MB)",
+                    "code": "PAYLOAD_TOO_LARGE"}), 413
+
+
+@app.errorhandler(500)
+def handle_500(e):
+    logger.exception("Internal server error")
+    return jsonify({"error": "Internal server error",
+                    "code": "INTERNAL_ERROR"}), 500
 
 
 def main():
@@ -193,14 +235,16 @@ def main():
     parser.add_argument("--host", default="127.0.0.1")
     args = parser.parse_args()
 
+    setup_logging(level="INFO", fmt="text")
+
     demo_dir = os.path.dirname(os.path.abspath(__file__))
     load_models(demo_dir)
 
     if not _models:
-        print("No trained models found. Run training scripts first.")
+        logger.error("No trained models found. Run training scripts first.")
         return
 
-    print(f"\n[WebUI] Starting at http://{args.host}:{args.port}")
+    logger.info(f"Starting at http://{args.host}:{args.port}")
     app.run(host=args.host, port=args.port, debug=False)
 
 

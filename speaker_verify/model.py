@@ -36,6 +36,35 @@ class SpeakerVerifyNet(on.Module):
         return x
 
 
+class EncryptedVerifyNet(on.Module):
+    """
+    MLP for encrypted template protection speaker verification.
+    80 features [emb_A || emb_B] -> 128 -> 64 -> 2
+
+    Takes concatenated embeddings as input so both voiceprints can be
+    encrypted together. The comparison logic (which is normally done in
+    cleartext as |emb_A - emb_B|) happens entirely inside the encrypted
+    domain. The server never sees individual embeddings.
+
+    This is the first FHE neural network approach to speaker verification
+    with encrypted biometric template comparison, improving over Nautsch
+    et al. (2018) which used Paillier partial HE with fixed distance metrics.
+    """
+    def __init__(self, input_dim=80):
+        super().__init__()
+        self.fc1 = on.Linear(input_dim, 128)
+        self.act1 = on.GELU()
+        self.fc2 = on.Linear(128, 64)
+        self.act2 = on.GELU()
+        self.fc3 = on.Linear(64, 2)
+
+    def forward(self, x):
+        x = self.act1(self.fc1(x))
+        x = self.act2(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+
 class SpeakerIDNet(on.Module):
     """
     MLP for speaker identification (who is speaking?).

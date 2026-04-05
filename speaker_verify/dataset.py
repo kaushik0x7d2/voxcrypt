@@ -177,6 +177,46 @@ def build_dataset(pairs, sr=16000, n_mfcc=20, enhanced=False):
     return np.array(X_list, dtype=np.float32), np.array(y_list, dtype=np.float32)
 
 
+def build_concat_dataset(pairs, sr=16000, n_mfcc=20, enhanced=False):
+    """
+    Extract concatenated pair features for encrypted template protection.
+
+    Instead of |emb_A - emb_B| (40-dim), produces [emb_A || emb_B] (80-dim).
+    This allows both voiceprints to be encrypted together, with the comparison
+    happening entirely under FHE — the server never sees individual embeddings.
+
+    Args:
+        pairs: List of (path_a, path_b, label) tuples.
+        sr: Sample rate for audio loading.
+        n_mfcc: Number of MFCC coefficients.
+        enhanced: If True, use enhanced embeddings with delta MFCCs.
+
+    Returns:
+        X: np.ndarray of shape (n_pairs, 2 * emb_dim) — concatenated features.
+        y: np.ndarray of shape (n_pairs,) — labels (1=same, 0=different).
+    """
+    from speaker_verify.features import pair_features_concat
+
+    embedding_cache = {}
+    X_list = []
+    y_list = []
+
+    for path_a, path_b, label in tqdm(pairs, desc="Extracting features"):
+        if path_a not in embedding_cache:
+            embedding_cache[path_a] = audio_to_embedding(
+                path_a, sr=sr, n_mfcc=n_mfcc, enhanced=enhanced)
+        if path_b not in embedding_cache:
+            embedding_cache[path_b] = audio_to_embedding(
+                path_b, sr=sr, n_mfcc=n_mfcc, enhanced=enhanced)
+
+        feat = pair_features_concat(
+            embedding_cache[path_a], embedding_cache[path_b])
+        X_list.append(feat)
+        y_list.append(label)
+
+    return np.array(X_list, dtype=np.float32), np.array(y_list, dtype=np.float32)
+
+
 def build_single_utterance_dataset(speakers, sr=16000, n_mfcc=20, enhanced=False,
                                    max_per_speaker=None):
     """

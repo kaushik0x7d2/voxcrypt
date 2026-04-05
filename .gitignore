@@ -35,6 +35,13 @@ Thumbs.db
 
 # Results
 results.tsv
+ablation_results.json
+evaluation_report.json
+
+# Environment / secrets
+.env
+*.env
+!production.env.example
 
 # Misc
 *.log

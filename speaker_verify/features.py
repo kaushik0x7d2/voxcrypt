@@ -90,6 +90,24 @@ def pair_features(emb_a, emb_b):
     return np.abs(emb_a - emb_b)
 
 
+def pair_features_concat(emb_a, emb_b):
+    """
+    Compute concatenated pair features for encrypted template protection.
+
+    Concatenates [emb_a || emb_b] so both embeddings can be encrypted together
+    and the comparison happens entirely under FHE. The neural network learns
+    the optimal comparison function in the encrypted domain.
+
+    Args:
+        emb_a: np.ndarray embedding for utterance A.
+        emb_b: np.ndarray embedding for utterance B.
+
+    Returns:
+        np.ndarray of shape (2 * len(emb_a),) — concatenated embeddings.
+    """
+    return np.concatenate([emb_a, emb_b])
+
+
 def audio_to_embedding(audio_path, sr=16000, n_mfcc=20, enhanced=False):
     """
     Convenience: audio file -> utterance embedding in one call.

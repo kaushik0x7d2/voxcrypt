@@ -4,9 +4,26 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "orion-voice"
-version = "0.1.0"
+version = "1.0.0"
 description = "End-to-end encrypted speaker verification using FHE"
+readme = "README.md"
+license = {file = "LICENSE"}
 requires-python = ">=3.10"
+authors = [
+    {name = "Kaushik Kachireddy", email = "kaushik0x7d2@users.noreply.github.com"},
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Security :: Cryptography",
+]
 dependencies = [
     "torch>=2.2.0",
     "torchaudio>=2.2.0",
@@ -17,10 +34,12 @@ dependencies = [
     "scikit-learn>=1.0.0",
     "PyYAML>=6.0",
     "tqdm>=4.30.0",
+    "flask>=3.0.0",
+    "requests>=2.31.0",
 ]
 
 [project.optional-dependencies]
-server = ["flask>=3.0.0"]
+production = ["waitress>=3.0.0"]
 dev = ["pytest>=7.0.0"]
 
 [tool.setuptools.packages.find]
@@ -30,4 +49,6 @@ include = ["speaker_verify*"]
 markers = [
     "slow: FHE integration tests (deselect with '-m \"not slow\"')",
     "e2e: end-to-end tests (deselect with '-m \"not e2e\"')",
+    "security: security tests",
+    "server: server endpoint tests",
 ]
