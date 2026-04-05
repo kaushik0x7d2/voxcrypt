@@ -1,4 +1,4 @@
-# Orion Voice — Encrypted Voice Analysis
+# VoxCrypt — Encrypted Voice Analysis
 
 End-to-end encrypted voice analysis using Fully Homomorphic Encryption (FHE). Supports speaker verification, speaker identification, gender classification, and emotion detection — all on **encrypted data**. The server never hears the audio or sees the result.
 
@@ -23,11 +23,13 @@ Client                              Server
 
 | Task | Cleartext Accuracy | FHE Accuracy | FHE-Clear Agreement | FHE Time |
 |------|-------------------|-------------|--------------------|---------|
-| Speaker Verification | 92.4% | **100%** (10/10) | 10/10 | ~18s/pair |
-| Encrypted Template Protection | 96.2% | **100%** (10/10) | 10/10 | ~9s/pair |
-| Gender Classification | 99.6% | **100%** (10/10) | 10/10 | ~5s/sample |
+| Speaker Verification | 92.4% | 100% (10/10) | 10/10 | ~18s/pair |
+| Encrypted Template Protection | 96.2% | 100% (10/10) | 10/10 | ~9s/pair |
+| Gender Classification | 99.6% | 100% (10/10) | 10/10 | ~5s/sample |
 | Speaker Identification | 99.2% | — | — | — |
 | Emotion Detection | 82.2% | — | — | — |
+
+*Note: FHE accuracy is reported on a 10-sample evaluation subset.*
 
 ## Setup
 
@@ -117,7 +119,7 @@ pytest tests/
 ## Project Structure
 
 ```
-orion-voice/
+voxcrypt/
 ├── configs/fhe_config.yml             # CKKS parameters
 ├── speaker_verify/
 │   ├── features.py                    # MFCC extraction, embeddings, pair features
@@ -167,7 +169,7 @@ This matches Orion's cancer demo pattern (30→128→64→2, GELU) which achieve
 
 ### 1. Encrypted Biometric Template Protection
 
-The first FHE neural network approach to speaker verification where **both voiceprints stay encrypted during comparison**. Unlike the standard pipeline (which computes |emb_A - emb_B| in cleartext before encryption), this approach encrypts [emb_A || emb_B] together and the neural network learns the optimal comparison function entirely under FHE.
+An FHE neural network approach to speaker verification where **both voiceprints stay encrypted during comparison**. Unlike the standard pipeline (which computes |emb_A - emb_B| in cleartext before encryption), this approach encrypts [emb_A || emb_B] together and the neural network learns the optimal comparison function entirely under FHE.
 
 This improves over Nautsch et al. (2018) which used Paillier partial HE (additive-only, interactive protocol) with fixed cosine/Euclidean distance metrics.
 
@@ -178,11 +180,11 @@ This improves over Nautsch et al. (2018) which used Paillier partial HE (additiv
 
 ### 2. Activation Function Ablation Study for CKKS Voice Models
 
-First systematic comparison of polynomial activations under CKKS FHE for speaker verification:
+A systematic comparison of polynomial activations under CKKS FHE for speaker verification:
 
 | Activation | Val Acc | FHE Acc | Precision | Input Level | FHE Time |
 |-----------|---------|---------|-----------|-------------|----------|
-| **GELU** | 91.2% | **100%** | **+6.5 bits** | 13 | 25.8s |
+| **GELU** | 91.2% | 100% | **+6.5 bits** | 13 | 25.8s |
 | SiLU(d=3) | 91.0% | 20% | -3.0 bits | 7 | 9.3s |
 | SiLU(d=5) | 91.0% | 20% | -2.2 bits | 9 | 9.2s |
 | SiLU(d=7) | 91.0% | 20% | -1.3 bits | 9 | 9.0s |
